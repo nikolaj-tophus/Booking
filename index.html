@@ -2,30 +2,80 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Book en dag</title>
+<title>Booking</title>
 
 <style>
 
 body{
 font-family:Arial;
-max-width:500px;
+max-width:420px;
 margin:auto;
 padding:20px;
+background:#f6f6f6;
+}
+
+h2{
+text-align:center;
+}
+
+.calendar{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:6px;
+margin-top:20px;
 }
 
 .day{
 padding:12px;
-border:1px solid #ddd;
-margin-bottom:6px;
-cursor:pointer;
+text-align:center;
+border-radius:8px;
+font-size:14px;
 }
 
 .free{
 background:#d4edda;
+cursor:pointer;
 }
 
 .booked{
 background:#f8d7da;
+}
+
+.disabled{
+background:#eee;
+color:#999;
+}
+
+.header{
+font-weight:bold;
+text-align:center;
+}
+
+#booking{
+margin-top:25px;
+background:white;
+padding:15px;
+border-radius:10px;
+display:none;
+}
+
+input{
+width:100%;
+padding:10px;
+margin-top:10px;
+border-radius:6px;
+border:1px solid #ddd;
+}
+
+button{
+width:100%;
+padding:12px;
+margin-top:15px;
+border:none;
+border-radius:8px;
+background:#000;
+color:white;
+font-size:16px;
 }
 
 </style>
@@ -36,14 +86,14 @@ background:#f8d7da;
 
 <h2>Book en dag</h2>
 
-<div id="days"></div>
+<div class="calendar" id="calendar"></div>
 
-<div id="form" style="display:none">
+<div id="booking">
 
-<h3 id="selected"></h3>
+<h3 id="selectedDate"></h3>
 
-<input id="name" placeholder="Navn"><br><br>
-<input id="phone" placeholder="Telefon"><br><br>
+<input id="name" placeholder="Navn">
+<input id="phone" placeholder="Telefon">
 
 <button onclick="book()">Book dag</button>
 
@@ -53,7 +103,16 @@ background:#f8d7da;
 
 const worker="https://booking-api.njordwear.workers.dev/"
 
-let selectedDate=null
+const days=["Man","Tir","Ons","Tor","Fre","Lør","Søn"]
+
+let selected=null
+
+days.forEach(d=>{
+let div=document.createElement("div")
+div.className="header"
+div.innerText=d
+calendar.appendChild(div)
+})
 
 async function load(){
 
@@ -62,39 +121,46 @@ const data=await res.json()
 
 const booked=data.map(x=>x.date)
 
-const container=document.getElementById("days")
+for(let i=0;i<120;i++){
 
-for(let i=0;i<180;i++){
+let date=new Date()
+date.setDate(date.getDate()+i)
 
-let d=new Date()
-d.setDate(d.getDate()+i)
+let day=date.getDay()
 
-let day=d.getDay()
+let cell=document.createElement("div")
+cell.className="day"
+
+let iso=date.toISOString().split("T")[0]
+
+cell.innerText=date.getDate()
 
 if(day===6 || day===0){
 
-let date=d.toISOString().split("T")[0]
+if(booked.includes(iso)){
 
-let div=document.createElement("div")
-div.className="day"
+cell.classList.add("booked")
 
-if(booked.includes(date)){
-div.classList.add("booked")
-div.innerText=date+" OPTAGET"
 }else{
-div.classList.add("free")
-div.innerText=date+" LEDIG"
 
-div.onclick=()=>{
-selectedDate=date
-document.getElementById("form").style.display="block"
-document.getElementById("selected").innerText=date
-}
-}
+cell.classList.add("free")
 
-container.appendChild(div)
+cell.onclick=()=>{
+selected=iso
+document.getElementById("booking").style.display="block"
+document.getElementById("selectedDate").innerText=
+date.toLocaleDateString("da-DK",{weekday:"long",day:"numeric",month:"long"})
+}
 
 }
+
+}else{
+
+cell.classList.add("disabled")
+
+}
+
+calendar.appendChild(cell)
 
 }
 
@@ -102,17 +168,22 @@ container.appendChild(div)
 
 async function book(){
 
-const name=document.getElementById("name").value
-const phone=document.getElementById("phone").value
+let name=document.getElementById("name").value
+let phone=document.getElementById("phone").value
 
 await fetch(worker+"/book",{
+
 method:"POST",
-headers:{"Content-Type":"application/json"},
+headers:{
+"Content-Type":"application/json"
+},
+
 body:JSON.stringify({
-date:selectedDate,
+date:selected,
 name,
 phone
 })
+
 })
 
 alert("Dag booket")
