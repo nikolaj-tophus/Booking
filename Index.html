@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Book en dag</title>
+
+<style>
+
+body{
+font-family:Arial;
+max-width:500px;
+margin:auto;
+padding:20px;
+}
+
+.day{
+padding:12px;
+border:1px solid #ddd;
+margin-bottom:6px;
+cursor:pointer;
+}
+
+.free{
+background:#d4edda;
+}
+
+.booked{
+background:#f8d7da;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h2>Book en dag</h2>
+
+<div id="days"></div>
+
+<div id="form" style="display:none">
+
+<h3 id="selected"></h3>
+
+<input id="name" placeholder="Navn"><br><br>
+<input id="phone" placeholder="Telefon"><br><br>
+
+<button onclick="book()">Book dag</button>
+
+</div>
+
+<script>
+
+const worker="https://booking-api.njordwear.workers.dev/"
+
+let selectedDate=null
+
+async function load(){
+
+const res=await fetch(worker+"/list")
+const data=await res.json()
+
+const booked=data.map(x=>x.date)
+
+const container=document.getElementById("days")
+
+for(let i=0;i<180;i++){
+
+let d=new Date()
+d.setDate(d.getDate()+i)
+
+let day=d.getDay()
+
+if(day===6 || day===0){
+
+let date=d.toISOString().split("T")[0]
+
+let div=document.createElement("div")
+div.className="day"
+
+if(booked.includes(date)){
+div.classList.add("booked")
+div.innerText=date+" OPTAGET"
+}else{
+div.classList.add("free")
+div.innerText=date+" LEDIG"
+
+div.onclick=()=>{
+selectedDate=date
+document.getElementById("form").style.display="block"
+document.getElementById("selected").innerText=date
+}
+}
+
+container.appendChild(div)
+
+}
+
+}
+
+}
+
+async function book(){
+
+const name=document.getElementById("name").value
+const phone=document.getElementById("phone").value
+
+await fetch(worker+"/book",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+date:selectedDate,
+name,
+phone
+})
+})
+
+alert("Dag booket")
+
+location.reload()
+
+}
+
+load()
+
+</script>
+
+</body>
+</html>
